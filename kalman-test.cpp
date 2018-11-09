@@ -10,15 +10,9 @@
 #include <opencv2/opencv.hpp>
 
 #include "kalman.hpp"
-/*
-int main() {
-	cv::Mat c(1,1,CV_64F);
-	c.at<double>(0) = 3;
-	std::cout << c << std::endl;
-	return 0;
-}
-*/
-int main(int argc, char* argv[]) {
+
+
+static int calcKalm(double x, int idx = 0) {
 
   int n = 3; // Number of states
   int m = 1; // Number of measurements
@@ -46,8 +40,35 @@ int main(int argc, char* argv[]) {
   std::cout << "P: \n" << P << std::endl;
 
   // Construct the filter
-  KalmanFilter kf(dt, A, C, Q, R, P);
+  static KalmanFilter kf[2];
+  static bool initialized[2] = {0};
+	if (!initialized[idx]) {
+		kf[idx] = KalmanFilter(dt, A, C, Q, R, P);
 
+  		// Best guess of initial states
+  		cv::Mat x0(n, n, CV_64F);
+  		x0 = (cv::Mat_<double>(n,n) << x, 0.0, -9.81);
+  		kf[idx].init(0,x0);
+	}
+  // Feed measurements into filter, output estimated states
+  double t = 0;
+  cv::Mat y(m, m, CV_64F);
+  cv::Mat tmp;
+  cv::transpose(kf[idx].state(),tmp);
+  std::cout << "t = " << t << ", " << "x_hat[0]: " << tmp << std::endl;
+  
+  
+    t += dt;
+    y.at<double>(0) = x;
+    kf[idx].update(y);
+    cv::transpose(y,tmp);
+    std::cout << "t = " << t << ", " << "y = " << tmp;
+    cv::transpose(kf[idx].state(),tmp);
+    std::cout << ", x_hat = " << tmp << std::endl;
+  return 0;
+}
+
+int main() {
   // List of noisy position measurements (y)
   std::vector<double> measurements = {
       1.04202710058, 1.10726790452, 1.2913511148, 1.48485250951, 1.72825901034,
@@ -60,27 +81,11 @@ int main(int argc, char* argv[]) {
       1.86967808173, 1.18073207847, 1.10729605087, 0.916168349913, 0.678547664519,
       0.562381751596, 0.355468474885, -0.155607486619, -0.287198661013, -0.602973173813
   };
-
-  // Best guess of initial states
-  cv::Mat x0(n, n, CV_64F);
-  x0 = (cv::Mat_<double>(n,n) << measurements[0], 0.0, -9.81);
-  kf.init(0,x0);
-
-  // Feed measurements into filter, output estimated states
-  double t = 0;
-  cv::Mat y(m, m, CV_64F);
-  cv::Mat tmp;
-  cv::transpose(kf.state(),tmp);
-  std::cout << "t = " << t << ", " << "x_hat[0]: " << tmp << std::endl;
+  
   for(int i = 0; i < measurements.size(); i++) {
-    t += dt;
-    y.at<double>(0) = measurements[i];
-    kf.update(y);
-    cv::transpose(y,tmp);
-    std::cout << "t = " << t << ", " << "y[" << i << "] = " << tmp;
-    cv::transpose(kf.state(),tmp);
-    std::cout << ", x_hat[" << i << "] = " << tmp << std::endl;
+  	calcKalm(measurements[i]);
   }
-  return 0;
+	return 0;
 }
+
 
