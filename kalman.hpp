@@ -1,14 +1,15 @@
 /**
-* Kalman filter implementation using Eigen. Based on the following
+* Kalman filter implementation using Opencv. Based on the following
 * introductory paper:
 *
 *     http://www.cs.unc.edu/~welch/media/pdf/kalman_intro.pdf
 *
-* @author: Hayk Martirosyan
-* @date: 2014.11.15
+* @author: Hayk Martirosyan (Eigen version)
+* @author : Lucas Oliveira Maggi (OpenCV version)
+* @date: 2014.11.15 - 2018.11.09
 */
 
-#include <Eigen/Dense>
+#include <opencv2/opencv.hpp>
 
 #pragma once
 
@@ -26,11 +27,11 @@ public:
   */
   KalmanFilter(
       double dt,
-      const Eigen::MatrixXd& A,
-      const Eigen::MatrixXd& C,
-      const Eigen::MatrixXd& Q,
-      const Eigen::MatrixXd& R,
-      const Eigen::MatrixXd& P
+      cv::Mat& A,
+      cv::Mat& C,
+      cv::Mat& Q,
+      cv::Mat& R,
+      cv::Mat& P
   );
 
   /**
@@ -46,30 +47,30 @@ public:
   /**
   * Initialize the filter with a guess for initial states.
   */
-  void init(double t0, const Eigen::VectorXd& x0);
+  void init(double t0, cv::Mat& x0);
 
   /**
   * Update the estimated state based on measured values. The
   * time step is assumed to remain constant.
   */
-  void update(const Eigen::VectorXd& y);
+  void update(cv::Mat& y);
 
   /**
   * Update the estimated state based on measured values,
   * using the given time step and dynamics matrix.
   */
-  void update(const Eigen::VectorXd& y, double dt, const Eigen::MatrixXd A);
+  void update(cv::Mat& y, double dt, cv::Mat A);
 
   /**
   * Return the current state and time.
   */
-  Eigen::VectorXd state() { return x_hat; };
+  cv::Mat state() { return x_hat; };
   double time() { return t; };
 
 private:
 
   // Matrices for computation
-  Eigen::MatrixXd A, C, Q, R, P, K, P0;
+  cv::Mat A, C, Q, R, P, K, P0;
 
   // System dimensions
   int m, n;
@@ -84,8 +85,8 @@ private:
   bool initialized;
 
   // n-size identity
-  Eigen::MatrixXd I;
+  cv::Mat I;
 
   // Estimated states
-  Eigen::VectorXd x_hat, x_hat_new;
+  cv::Mat x_hat, x_hat_new;
 };

@@ -7,10 +7,17 @@
 
 #include <iostream>
 #include <vector>
-#include <Eigen/Dense>
+#include <opencv2/opencv.hpp>
 
 #include "kalman.hpp"
-
+/*
+int main() {
+	cv::Mat c(1,1,CV_64F);
+	c.at<double>(0) = 3;
+	std::cout << c << std::endl;
+	return 0;
+}
+*/
 int main(int argc, char* argv[]) {
 
   int n = 3; // Number of states
@@ -18,20 +25,19 @@ int main(int argc, char* argv[]) {
 
   double dt = 1.0/30; // Time step
 
-  Eigen::MatrixXd A(n, n); // System dynamics matrix
-  Eigen::MatrixXd C(m, n); // Output matrix
-  Eigen::MatrixXd Q(n, n); // Process noise covariance
-  Eigen::MatrixXd R(m, m); // Measurement noise covariance
-  Eigen::MatrixXd P(n, n); // Estimate error covariance
-
+  cv::Mat A(n, n, CV_64F); // System dynamics matrix
+  cv::Mat C(m, n, CV_64F); // Output matrix
+  cv::Mat Q(n, n, CV_64F); // Process noise covariance
+  cv::Mat R(m, m, CV_64F); // Measurement noise covariance
+  cv::Mat P(n, n, CV_64F); // Estimate error covariance
   // Discrete LTI projectile motion, measuring position only
-  A << 1, dt, 0, 0, 1, dt, 0, 0, 1;
-  C << 1, 0, 0;
+  A = (cv::Mat_<double>(n,n) << 1.0, dt, 0.0,0.0, 1.0, dt, 0.0, 0.0, 1.0);
+  C = (cv::Mat_<double>(m,n) << 1.0, 0.0, 0.0);
 
   // Reasonable covariance matrices
-  Q << .05, .05, .0, .05, .05, .0, .0, .0, .0;
-  R << 5;
-  P << .1, .1, .1, .1, 10000, 10, .1, 10, 100;
+  Q = (cv::Mat_<double>(n,n) << .05, .05, .0 , .05, .05, .0 , .0, .0, .0);
+  R.at<double>(0) = 5.0;
+  P = (cv::Mat_<double>(n,n) << .1, .1, .1, .1, 10000.0, 10.0, .1, 10.0, 100.0);
 
   std::cout << "A: \n" << A << std::endl;
   std::cout << "C: \n" << C << std::endl;
@@ -40,7 +46,7 @@ int main(int argc, char* argv[]) {
   std::cout << "P: \n" << P << std::endl;
 
   // Construct the filter
-  KalmanFilter kf(A, C, Q, R, P);
+  KalmanFilter kf(dt, A, C, Q, R, P);
 
   // List of noisy position measurements (y)
   std::vector<double> measurements = {
@@ -56,21 +62,25 @@ int main(int argc, char* argv[]) {
   };
 
   // Best guess of initial states
-  Eigen::VectorXd x0(n);
-  x0 << measurements[0], 0, -9.81;
-  kf.init(x0);
+  cv::Mat x0(n, n, CV_64F);
+  x0 = (cv::Mat_<double>(n,n) << measurements[0], 0.0, -9.81);
+  kf.init(0,x0);
 
   // Feed measurements into filter, output estimated states
   double t = 0;
-  Eigen::VectorXd y(m);
-  std::cout << "t = " << t << ", " << "x_hat[0]: " << kf.state().transpose() << std::endl;
+  cv::Mat y(m, m, CV_64F);
+  cv::Mat tmp;
+  cv::transpose(kf.state(),tmp);
+  std::cout << "t = " << t << ", " << "x_hat[0]: " << tmp << std::endl;
   for(int i = 0; i < measurements.size(); i++) {
     t += dt;
-    y << measurements[i];
+    y.at<double>(0) = measurements[i];
     kf.update(y);
-    std::cout << "t = " << t << ", " << "y[" << i << "] = " << y.transpose()
-        << ", x_hat[" << i << "] = " << kf.state().transpose() << std::endl;
+    cv::transpose(y,tmp);
+    std::cout << "t = " << t << ", " << "y[" << i << "] = " << tmp;
+    cv::transpose(kf.state(),tmp);
+    std::cout << ", x_hat[" << i << "] = " << tmp << std::endl;
   }
-
   return 0;
 }
+

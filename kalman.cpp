@@ -12,54 +12,68 @@
 
 KalmanFilter::KalmanFilter(
     double dt,
-    const Eigen::MatrixXd& A,
-    const Eigen::MatrixXd& C,
-    const Eigen::MatrixXd& Q,
-    const Eigen::MatrixXd& R,
-    const Eigen::MatrixXd& P)
+    cv::Mat& A,
+    cv::Mat& C,
+    cv::Mat& Q,
+    cv::Mat& R,
+    cv::Mat& P)
   : A(A), C(C), Q(Q), R(R), P0(P),
-    m(C.rows()), n(A.rows()), dt(dt), initialized(false),
-    I(n, n), x_hat(n), x_hat_new(n)
+    m(C.rows), n(A.rows), dt(dt), initialized(false),
+    I(n, n, CV_64F), x_hat(n,1,CV_64F), x_hat_new(n,1,CV_64F)
 {
-  I.setIdentity();
+  I = cv::Mat::eye(n,n,CV_64F);
+  std::cout << "aeaeae" << C << std::endl;
 }
 
 KalmanFilter::KalmanFilter() {}
 
-void KalmanFilter::init(double t0, const Eigen::VectorXd& x0) {
+void KalmanFilter::init(double t0, cv::Mat& x0) {
   x_hat = x0;
   P = P0;
   this->t0 = t0;
   t = t0;
   initialized = true;
+  //cv::transpose(C,C);
 }
 
 void KalmanFilter::init() {
-  x_hat.setZero();
+  x_hat = cv::Mat::zeros(4,1,CV_64F);
   P = P0;
   t0 = 0;
   t = t0;
   initialized = true;
 }
 
-void KalmanFilter::update(const Eigen::VectorXd& y) {
+void KalmanFilter::update(cv::Mat& y) {
 
   if(!initialized)
     throw std::runtime_error("Filter is not initialized!");
-
-  x_hat_new = A * x_hat;
-  P = A*P*A.transpose() + Q;
-  K = P*C.transpose()*(C*P*C.transpose() + R).inverse();
-  x_hat_new += K * (y - C*x_hat_new);
-  P = (I - K*C)*P;
-  x_hat = x_hat_new;
+	
+	cv::Mat tmp;
+  x_hat_new = A * x_hat;//nx1
+  cv::transpose(A,tmp);//nxn
+  P = A*P*tmp + Q;//nxn
+  cv::transpose(C,tmp);//3x1
+  std::cout << C << P << tmp << std::endl;
+  cv::Mat tmp4 = C*P;
+  cv::Mat tmp3 = tmp4*tmp;
+  cv::Mat tmp2 = (tmp3 + R).inv();
+  K = P*tmp*tmp2;// 3x1
+  cv::Mat tmp5 = C*x_hat_new;
+  x_hat_new += K * (y - tmp5);//3x1
+  P = (I - K*C)*P;//3x3
+  
+  x_hat = x_hat_new;//1x3
 
   t += dt;
+  /*
+  */
 }
 
-void KalmanFilter::update(const Eigen::VectorXd& y, double dt, const Eigen::MatrixXd A) {
+void KalmanFilter::update(cv::Mat& y, double dt, cv::Mat A) {
 
   this->A = A;
   this->dt = dt;
   update(y);
 }
+
