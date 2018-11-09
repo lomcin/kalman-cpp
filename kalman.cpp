@@ -22,7 +22,6 @@ KalmanFilter::KalmanFilter(
     I(n, n, CV_64F), x_hat(n,1,CV_64F), x_hat_new(n,1,CV_64F)
 {
   I = cv::Mat::eye(n,n,CV_64F);
-  std::cout << "aeaeae" << C << std::endl;
 }
 
 KalmanFilter::KalmanFilter() {}
@@ -44,7 +43,7 @@ void KalmanFilter::init() {
   initialized = true;
 }
 
-void KalmanFilter::update(cv::Mat& y) {
+void KalmanFilter::update(cv::Mat& y, double dt) {
 
   if(!initialized)
     throw std::runtime_error("Filter is not initialized!");
@@ -54,7 +53,6 @@ void KalmanFilter::update(cv::Mat& y) {
   cv::transpose(A,tmp);//nxn
   P = A*P*tmp + Q;//nxn
   cv::transpose(C,tmp);//3x1
-  std::cout << C << P << tmp << std::endl;
   cv::Mat tmp4 = C*P;
   cv::Mat tmp3 = tmp4*tmp;
   cv::Mat tmp2 = (tmp3 + R).inv();

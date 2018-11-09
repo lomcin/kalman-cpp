@@ -12,12 +12,10 @@
 #include "kalman.hpp"
 
 
-static int calcKalm(double x, int idx = 0) {
+static cv::Mat calcKalm(double x, double realDt = 1.0/30.0, int idx = 0) {
 
   int n = 3; // Number of states
   int m = 1; // Number of measurements
-
-  double dt = 1.0/30; // Time step
 
   cv::Mat A(n, n, CV_64F); // System dynamics matrix
   cv::Mat C(m, n, CV_64F); // Output matrix
@@ -25,7 +23,7 @@ static int calcKalm(double x, int idx = 0) {
   cv::Mat R(m, m, CV_64F); // Measurement noise covariance
   cv::Mat P(n, n, CV_64F); // Estimate error covariance
   // Discrete LTI projectile motion, measuring position only
-  A = (cv::Mat_<double>(n,n) << 1.0, dt, 0.0,0.0, 1.0, dt, 0.0, 0.0, 1.0);
+  A = (cv::Mat_<double>(n,n) << 1.0, realDt, 0.0,0.0, 1.0, realDt, 0.0, 0.0, 1.0);
   C = (cv::Mat_<double>(m,n) << 1.0, 0.0, 0.0);
 
   // Reasonable covariance matrices
@@ -33,17 +31,18 @@ static int calcKalm(double x, int idx = 0) {
   R.at<double>(0) = 5.0;
   P = (cv::Mat_<double>(n,n) << .1, .1, .1, .1, 10000.0, 10.0, .1, 10.0, 100.0);
 
+/*
   std::cout << "A: \n" << A << std::endl;
   std::cout << "C: \n" << C << std::endl;
   std::cout << "Q: \n" << Q << std::endl;
   std::cout << "R: \n" << R << std::endl;
-  std::cout << "P: \n" << P << std::endl;
+  std::cout << "P: \n" << P << std::endl;*/
 
   // Construct the filter
   static KalmanFilter kf[2];
   static bool initialized[2] = {0};
 	if (!initialized[idx]) {
-		kf[idx] = KalmanFilter(dt, A, C, Q, R, P);
+		kf[idx] = KalmanFilter(realDt, A, C, Q, R, P);
 
   		// Best guess of initial states
   		cv::Mat x0(n, n, CV_64F);
@@ -55,17 +54,17 @@ static int calcKalm(double x, int idx = 0) {
   cv::Mat y(m, m, CV_64F);
   cv::Mat tmp;
   cv::transpose(kf[idx].state(),tmp);
-  std::cout << "t = " << t << ", " << "x_hat[0]: " << tmp << std::endl;
+  //std::cout << "t = " << t << ", " << "x_hat[0]: " << tmp << std::endl;
   
   
-    t += dt;
+    t += realDt;
     y.at<double>(0) = x;
     kf[idx].update(y);
     cv::transpose(y,tmp);
-    std::cout << "t = " << t << ", " << "y = " << tmp;
+    //std::cout << "t = " << t << ", " << "y = " << tmp;
     cv::transpose(kf[idx].state(),tmp);
-    std::cout << ", x_hat = " << tmp << std::endl;
-  return 0;
+    //std::cout << ", x_hat = " << tmp << std::endl;
+  return tmp;
 }
 
 int main() {
@@ -82,9 +81,19 @@ int main() {
       0.562381751596, 0.355468474885, -0.155607486619, -0.287198661013, -0.602973173813
   };
   
+  std::vector<double> predict;
+  
   for(int i = 0; i < measurements.size(); i++) {
-  	calcKalm(measurements[i]);
+  	cv::Mat tmp = calcKalm(measurements[i],1.0/30.0);
+  	predict.push_back(
+  		tmp.at<double>(0)
+  	);
+
   }
+  
+    for(int i = 0; i < measurements.size()-1; i++) {
+  		printf("%.4lf\n",fabs(predict[i]-measurements[i+1]));
+  	}
 	return 0;
 }
 
