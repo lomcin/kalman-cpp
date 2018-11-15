@@ -2,7 +2,8 @@
 * Implementation of KalmanFilter class.
 *
 * @author: Hayk Martirosyan
-* @date: 2014.11.15
+* @author : Lucas Oliveira Maggi (OpenCV version)
+* @date: 2014.11.15 - 2018.11.09
 */
 
 #include <iostream>
@@ -43,13 +44,14 @@ void KalmanFilter::init() {
   initialized = true;
 }
 
-void KalmanFilter::update(cv::Mat& y, double dt) {
+void KalmanFilter::update(cv::Mat& y, double dt, double acc) {
 
   if(!initialized)
     throw std::runtime_error("Filter is not initialized!");
-	
+	double bterm1 = (dt*dt)/2.0;
+	cv:Mat B = (cv:Mat_<double>(n,m) << bterm1 , 0.0, 0.0, bterm1, dt, 0.0, 0.0, dt);
 	cv::Mat tmp;
-  x_hat_new = A * x_hat;//nx1
+  x_hat_new = A * x_hat + B*acc;//nx1
   cv::transpose(A,tmp);//nxn
   P = A*P*tmp + Q;//nxn
   cv::transpose(C,tmp);//3x1
@@ -58,8 +60,8 @@ void KalmanFilter::update(cv::Mat& y, double dt) {
   cv::Mat tmp2 = (tmp3 + R).inv();
   K = P*tmp*tmp2;// 3x1
   cv::Mat tmp5 = C*x_hat_new;
-  x_hat_new += K * (y - tmp5);//3x1
   P = (I - K*C)*P;//3x3
+  x_hat_new += K * (y - tmp5);//3x1
   
   x_hat = x_hat_new;//1x3
 

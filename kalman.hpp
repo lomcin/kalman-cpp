@@ -53,7 +53,7 @@ public:
   * Update the estimated state based on measured values. The
   * time step is assumed to remain constant.
   */
-  void update(cv::Mat& y, double dt = 1.0/30.0);
+  void update(cv::Mat& y, double dt = 1.0/30.0, double acc = -9.81);
 
   /**
   * Update the estimated state based on measured values,
